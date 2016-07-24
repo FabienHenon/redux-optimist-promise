@@ -41,6 +41,17 @@ export default function optimistPromiseMiddleware (resolvedName = RESOLVED_NAME,
   [RESOLVED_NAME, REJECTED_NAME] = [resolvedName, rejectedName]
   let nextTransactionID = 0
   return ({ dispatch }) => (next) => (action) => {
+    // If the action comes from the offline queue we check if we need to add optimist params
+    if (isFSA(action) && action.meta && action.meta.forceOptimist) {
+      return next({
+        ...action,
+        meta: {
+          ...action.meta
+        },
+        optimist: {type: BEGIN, id: action.meta.optimistTransactionID}
+      })
+    }
+
     if (!isFSA(action) || !action.meta || !isPromise(action.meta.promise)) {
       return next(action)
     }
@@ -80,6 +91,9 @@ export default function optimistPromiseMiddleware (resolvedName = RESOLVED_NAME,
 
     if (!skipOptimist) {
       next(newAction)
+    } else if (action.meta.optimistTransactionID) {
+      // If the transaction ID was set by the offline queue, then we use it
+      transactionID = action.meta.optimistTransactionID
     }
 
     // Create a base for the next action containing the metadata.
