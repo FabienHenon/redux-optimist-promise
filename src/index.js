@@ -9,6 +9,8 @@ const BEGIN = 'BEGIN'
 const COMMIT = 'COMMIT'
 const REVERT = 'REVERT'
 
+export const QUEUE_EXEC_FINISHED = 'redux-optimist-promise/QUEUE_EXEC_FINISHED';
+
 export function resolve (actionName) {
   return actionName + RESOLVED_NAME
 }
@@ -37,7 +39,7 @@ export function isThenAction (thenActionName) {
   return isResolvedAction(thenActionName) || isRejectedAction(thenActionName)
 }
 
-export default function optimistPromiseMiddleware (resolvedName = RESOLVED_NAME, rejectedName = REJECTED_NAME) {
+export default function optimistPromiseMiddleware (emitter, resolvedName = RESOLVED_NAME, rejectedName = REJECTED_NAME) {
   [RESOLVED_NAME, REJECTED_NAME] = [resolvedName, rejectedName]
   let nextTransactionID = 0
   return ({ dispatch }) => (next) => (action) => {
@@ -57,6 +59,7 @@ export default function optimistPromiseMiddleware (resolvedName = RESOLVED_NAME,
     }
 
     const isOptimist = action.meta.optimist
+    const stopForceOffline = action.meta.stopForceOffline
 
     let transactionID
 
@@ -125,6 +128,9 @@ export default function optimistPromiseMiddleware (resolvedName = RESOLVED_NAME,
           actionToDispatch.optimist = {type: COMMIT, id: transactionID}
         }
         dispatch(actionToDispatch)
+        if (stopForceOffline) {
+          setTimeout(() => emitter.emit(QUEUE_EXEC_FINISHED, actionToDispatch))
+        }
         return result
       }).catch(
       (error) => {
@@ -137,6 +143,9 @@ export default function optimistPromiseMiddleware (resolvedName = RESOLVED_NAME,
           actionToDispatch.optimist = {type: REVERT, id: transactionID}
         }
         dispatch(actionToDispatch)
+        if (stopForceOffline) {
+          setTimeout(() => emitter.emit(QUEUE_EXEC_FINISHED, actionToDispatch))
+        }
         throw error
       }
     )

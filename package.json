@@ -32,6 +32,7 @@
     "@mathieudutour/js-fatigue": "1.0.2"
   },
   "dependencies": {
+    "eventemitter3": "^2.0.0",
     "flux-standard-action": "^0.6.1"
   }
 }
